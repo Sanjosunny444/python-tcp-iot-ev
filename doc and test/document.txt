@@ -1,0 +1,634 @@
+========================================================================
+SETTINGS OPTIONS — SERVER SIDE vs DEVICE SIDE
+========================================================================
+
+========================================================================
+SERVER SIDE (Omni protocol — what the upstream server sends)
+========================================================================
+
+  Command | Purpose                              | Status
+  --------|--------------------------------------|------------------
+  Q0      | Sign-in (bridge -> server)           | IMPLEMENTED
+  H0      | Heartbeat (bridge -> server)         | IMPLEMENTED
+  R0      | Unlock/Lock request (handshake)      | IMPLEMENTED
+  L0      | Unlock command                       | IMPLEMENTED
+  L1      | Lock command                         | IMPLEMENTED
+  L5      | External lock control                | IMPLEMENTED
+  S5      | IOT device settings                  | IMPLEMENTED
+  S7      | Scooter setting 1 (temporary)        | IMPLEMENTED
+  S4      | Scooter setting 2 (persistent)       | IMPLEMENTED
+  S6      | Get scooter info                     | IMPLEMENTED
+  V0      | Beep playback                        | IMPLEMENTED
+  D0      | Get GPS (single)                     | IMPLEMENTED
+  G0      | Get firmware version                 | IMPLEMENTED
+  E0      | Fault code (device -> server)        | IMPLEMENTED
+  S1      | Event notification (restart)         | IMPLEMENTED
+  I0      | Get SIM ICCID                        | IMPLEMENTED
+  M0      | Get BLE MAC                          | IMPLEMENTED
+  --------|--------------------------------------|------------------
+  K0      | BLE 8-byte KEY set/get               | NOT APPLICABLE
+  D1      | Positioning tracking interval        | NOT APPLICABLE
+  V1      | Beep playback settings               | NOT APPLICABLE
+  Z0/Z1   | Controller custom data               | NOT APPLICABLE
+  D2      | WiFi assisted positioning            | NOT APPLICABLE
+  S2      | LED lamp strip control               | NOT APPLICABLE
+  C0      | RFID command                         | NOT APPLICABLE
+  B0      | Beacon verify                        | NOT APPLICABLE
+  W0      | Alarm (device -> server)             | NOT APPLICABLE
+  --------|--------------------------------------|------------------
+  U0-U6   | OTA firmware updates                 | EXCLUDED
+
+
+========================================================================
+DEVICE SIDE (DiLu protocol — what the CCU holds)
+========================================================================
+
+--- Query / Setting parameter (CMD 0x10 / 0x11) ---
+
+  Field                      | What it controls
+  ---------------------------|-------------------------------------------
+  APN / Username / Password  | Cellular network login
+  BLE name                   | BLE advertising name
+  Heartbeat interval (1B)    | Device -> server keepalive rate (minutes)
+  Unlock notify interval (4B)| Status upload rate when unlocked (seconds)
+  Lock notify interval (4B)  | Status upload rate when locked (seconds)
+  Static automatic lock (4B) | Auto-lock after inactivity (seconds)
+  Vibration sensitivity (1B) | Motion / alarm sensitivity
+  Alarm tone times (1B)      | How many times alarm sound plays
+  Chain lock BLE MAC / KEY   | BLE pairing for chain lock
+  Battery lock BLE MAC / KEY | BLE pairing for battery lock
+
+
+--- Scooter / ride settings (S7 / S4 equivalent inside device) ---
+
+  Headlight, speed mode, throttle, cruise, startup behavior,
+  speed limits, etc.
+
+
+--- Version info (CMD 0x06 Get version response) ---
+
+  Field                      | Size
+  ---------------------------|--------
+  CCU serial number          | String 32
+  CCU firmware version       | String 32
+  CCU hardware version       | String 32
+  ECU serial number          | String 64
+  ECU firmware version       | String 32
+  ECU hardware version       | String 32
+  Battery serial number      | String 64
+  Battery firmware version   | String 32
+  Battery hardware version   | String 32
+  Battery information        | Byte 23
+  CCU information            | Byte 16
+
+
+========================================================================
+IMPLEMENTED COMMANDS — FIELD MAPPING & VERIFICATION
+========================================================================
+
+
+------------------------------------------------------------------------
+Q0 — Sign-in (first status after auth + device info)
+------------------------------------------------------------------------
+  Direction: Bridge -> Server
+  Trigger:   auth_received + info_received + status_received (all 3, any order)
+
+  Omni field       | Value        | DiLu source             | Verified
+  -----------------|-------------|-------------------------|--------
+  IMEI             | 866789...   | device_info["IMEI"]     | YES
+  Voltage          | 1200        | Voltage * 100 (centiV)  | YES
+  Battery          | 85          | Battery level           | YES
+  CSQ              | 20          | CSQ                     | YES
+
+  Format: *SCOR,OM,<IMEI>,Q0,<voltage>,<battery>,<csq>#
+
+
+------------------------------------------------------------------------
+H0 — Heartbeat (all status notifications after Q0)
+------------------------------------------------------------------------
+  Direction: Bridge -> Server
+  Trigger:   status notification (CMD 0x00) after Q0 sent,
+             OR DiLu heartbeat packet (51 55 01 00 03 FF 41)
+
+  Omni field       | Value        | DiLu source             | Verified
+  -----------------|-------------|-------------------------|--------
+  Lock status      | 1           | Lock status (Locked=1)  | YES
+  Voltage          | 1200        | Voltage * 100 (centiV)  | YES
+  CSQ              | 20          | CSQ                     | YES
+  Battery          | 85          | Battery level           | YES
+  Charging         | 1           | Charging status         | YES
+
+  Format: *SCOR,OM,<IMEI>,H0,<lock>,<voltage>,<csq>,<battery>,<charging>#
+
+
+------------------------------------------------------------------------
+S5 — IOT Device Settings -> DiLu 0x11 Setting Parameters
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device
+  Action:    Translate + echo S5 back to server
+
+  Omni S5 field              | DiLu 0x11 field           | Conversion
+  ---------------------------|--------------------------|--------------------
+  Accelerometer (0-3)        | Vibration sensitivity    | 1->10, 2->6, 3->3
+  S6 upload in unlock (1/2)  | Unlock notify interval   | 1->0, 2->keep/10
+  Heartbeat interval (sec)   | Heartbeat interval (min) | sec / 60
+  S6 interval in unlock (sec)| Unlock notify interval   | direct
+
+  Fields not in S5 (APN, BLE keys, etc.) are sent as last-known values.
+
+
+------------------------------------------------------------------------
+S7 — Scooter Setting 1 -> DiLu 0x03 + 0x07
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device
+  Action:    Translate + echo S7 back to server
+
+  Omni S7 field          | DiLu CMD  | DiLu field         | Conversion
+  -----------------------|-----------|--------------------|-----------------
+  Headlight (1/2)        | 0x03      | Headlight control  | 1->0x00, 2->0x01
+  Mode (1/2/3)           | 0x07      | Mode + Speed limit | 1,2->soft, 3->sport
+  Throttle response (1/2)| -         | not in device doc  | -
+  Taillights (1/2)       | -         | not in device doc  | -
+
+  Mode -> Speed mapping:
+    Omni 1 (low)    -> DiLu soft  (0x00) + Low speed limit
+    Omni 2 (medium) -> DiLu soft  (0x00) + Medium speed limit
+    Omni 3 (high)   -> DiLu sport (0x01) + High speed limit
+
+
+------------------------------------------------------------------------
+S4 — Scooter Setting 2 -> DiLu 0x07
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device
+  Action:    Save speed limits, re-send 0x07 if limits changed
+
+  Omni S4 field               | DiLu CMD | Conversion
+  ----------------------------|---------|-----------------------------
+  Inch speed display (1/2)    | -       | not in device doc
+  Cruise control (1/2)        | -       | not in device doc
+  Startup mode (1/2)          | -       | not in device doc
+  Button switch mode (1/2)    | -       | not in device doc
+  Key switch headlight (1/2)  | -       | not in device doc
+  Low speed limit (6-25 km/h) | 0x07    | saved, sent if active mode is low
+  Med speed limit (6-25 km/h) | 0x07    | saved, sent if active mode is med
+  High speed limit (6-25 km/h)| 0x07    | saved, sent if active mode is high
+
+
+------------------------------------------------------------------------
+S6 — Get Scooter Info (responds from cache)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge (no device query)
+  Action:    Build response from cached device_info + scooter_settings
+
+  Omni S6 field    | Value   | DiLu source                | Verified
+  -----------------|---------|---------------------------|--------
+  Power            | 85      | Battery level              | YES
+  Mode             | 2       | scooter_settings["Mode"]   | YES
+  Speed            | 123     | Speed * 10 (0.1km/h unit)  | YES
+  Charging         | 1       | Charging status            | YES
+  Battery 1 volt   | 120     | Voltage * 10 (0.1V unit)   | YES
+  Battery 2 volt   | 0       | Not in device doc                | YES
+  Lock status      | 1       | Lock status                | YES
+  Signal           | 20      | CSQ                        | YES
+  Mileage          | 0       | Not in device doc (per-ride)| YES
+  MCC-MNC          | (empty) | Not in device doc                | YES
+  LAC              | (empty) | Not in device doc                | YES
+  CELLID           | (empty) | Not in device doc                | YES
+
+  Format: *SCOR,OM,<IMEI>,S6,<power>,<mode>,<speed>,<charging>,
+          <bat1>,<bat2>,<lock>,<signal>,<mileage>,,,#
+
+
+------------------------------------------------------------------------
+V0 — Beep Playback -> DiLu 0x0C Audio Control
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device
+  Action:    Translate + echo V0 back to server
+
+  Omni V0 | DiLu 0x0C (switch, file, repeat)  | Meaning
+  --------|-----------------------------------|-----------------------
+  1       | 0x01, 0x01, 0x03                  | Play file 1, 3 times
+  2       | 0x01, 0x02, 0x03                  | Play file 2, 3 times
+  3       | 0x01, 0x03, 0x03                  | Play file 3, 3 times
+  80      | 0x10, 0x00, 0x00                  | Turn off audio
+  81      | 0x11, 0x00, 0x00                  | Turn on audio
+
+
+------------------------------------------------------------------------
+D0 — Get GPS Position (responds from cache)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge (no device query)
+  Action:    Build response from cached device_info with coordinate conversion
+
+  Omni D0 field     | Value        | DiLu source            | Verified
+  ------------------|-------------|------------------------|--------
+  Identifier        | 0           | Single position        | YES
+  UTC time          | (empty)     | Not in device doc            | YES
+  Status            | A           | Location signal (1=GPS)| YES
+  Latitude          | 1220.7407   | 12.3456789 deg->NMEA   | YES
+  Hemisphere        | N           | Positive = N           | YES
+  Longitude         | 09845.9259  | 98.7654321 deg->NMEA   | YES
+  Hemisphere        | E           | Positive = E           | YES
+  Satellites        | 10          | Number of satellites   | YES
+  HDOP              | 1.00        | Location accuracy / 5  | YES
+  UTC date          | (empty)     | Not in device doc            | YES
+  Altitude          | (empty)     | Not in device doc            | YES
+  Height unit       | M           | Fixed                  | YES
+  Mode              | A           | GPS = Autonomous       | YES
+
+  Coordinate conversion (decimal -> NMEA ddmm.mmmm):
+    12.3456789 deg -> dd=12, mm=0.3456789*60=20.7407 -> "1220.7407"
+    98.7654321 deg -> ddd=98, mm=0.7654321*60=45.9259 -> "09845.9259"
+
+
+------------------------------------------------------------------------
+G0 — Get Firmware Version -> DiLu 0x06 Get Version
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device -> Bridge -> Server
+  Action:    Send DiLu 0x06 query, wait for response, then send G0 to server
+
+  Omni G0 field          | Value        | DiLu source               | Verified
+  -----------------------|-------------|---------------------------|--------
+  1 - IoT firmware       | 1.0.4       | CCU firmware version      | YES
+  2 - IoT date           | (empty)     | Not in device doc               | YES
+  3 - Controller ver     | ECU-FW-1.2  | ECU firmware version      | YES
+  4 - BMS version        | BAT-FW-3.1  | Battery firmware version  | YES
+  5 - Voice file ver     | (empty)     | Not in device doc               | YES
+  6-9 - Reserved         | all empty   | n/a                       | YES
+
+  Format: *SCOR,OM,<IMEI>,G0,<iot>,<date>,<ctrl>,<bms>,<voice>,,,,#
+
+
+------------------------------------------------------------------------
+E0 — Fault Code Upload (auto-detected from status)
+------------------------------------------------------------------------
+  Direction: Bridge -> Server (auto, when fault code changes)
+  Trigger:   Status notification with non-zero Fault code (different from last)
+  Server:    Auto-acknowledges with *SCOS,OM,<IMEI>,E0#
+
+  Omni E0 field    | Value  | DiLu source         | Verified
+  -----------------|--------|--------------------|---------
+  Error code       | 3      | Fault code (0x0003)| YES
+
+  Format: *SCOR,OM,<IMEI>,E0,<error_code>#
+
+  DiLu fault codes (Appendix 1, scooter):
+    Bit0 = Overcurrent       Bit4 = Up-bridge fault
+    Bit1 = Low voltage       Bit5 = Down-bridge fault
+    Bit2 = Over voltage      Bit6 = Motor fault
+    Bit3 = Motor stalling    Bit7 = ECU other faults
+    Bit8 = Speed bar fault   Bit10 = ECU firmware fault
+    Bit9 = Brake bar fault   Bit11 = CCU-ECU lost comm
+
+  Behavior:
+    - Fault appears (0 -> non-zero):  E0 sent + H0
+    - Same fault repeats:             H0 only (no duplicate E0)
+    - Fault clears (non-zero -> 0):   H0 only, flag reset
+    - New fault appears:              E0 sent again
+
+
+------------------------------------------------------------------------
+R0 — Unlock/Lock Request (handshake)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge (no device query)
+  Action:    Bridge generates random KEY (0-255), stores it, echoes R0
+             back to server with the KEY. DiLu doesn't need a handshake.
+
+  Omni R0 server->lock args:
+    [operation, key_time, user_id, timestamp]
+    operation: 0=unlock, 1=lock, 2=RFID unlock, 3=RFID lock
+
+  Omni R0 lock->server response:
+    [operation, KEY, user_id, timestamp]
+
+  Format: *SCOR,OM,<IMEI>,R0,<operation>,<KEY>,<user_id>,<timestamp>#
+
+  Note: R0 must be sent before L0 or L1. The KEY from R0 response
+  is required in the L0/L1 command for verification.
+
+
+------------------------------------------------------------------------
+L0 — Unlock Command -> DiLu 0x02 (motor unlock)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device
+  Action:    Verify R0 KEY, send DiLu 0x02 (unlock motor), forward
+             result to server when device responds
+
+  Omni L0 server->lock args: [KEY, user_id, timestamp]
+
+  Omni L0 field      | DiLu 0x02 field       | Value
+  -------------------|-----------------------|------------------
+  KEY                | (verified by bridge)  | must match R0 KEY
+  unlock action      | lock_control          | 0x01 (unlock)
+  motor lock         | lock_type             | 0x00 (motor)
+
+  Omni L0 lock->server response: [status, user_id, timestamp]
+    status: 0=success, 1=failure, 2=KEY error
+
+  Format: *SCOR,OM,<IMEI>,L0,<status>,<user_id>,<timestamp>#
+
+  Per client: always use lock_type=0x00 (motor) for main ride lock.
+  RFID unlock/lock uses same mapping as normal unlock/lock.
+
+
+------------------------------------------------------------------------
+L1 — Lock Command -> DiLu 0x02 (motor lock)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device
+  Action:    Verify R0 KEY, send DiLu 0x02 (lock motor), forward
+             result to server when device responds
+
+  Omni L1 server->lock args: [KEY]
+
+  Omni L1 field      | DiLu 0x02 field       | Value
+  -------------------|-----------------------|------------------
+  KEY                | (verified by bridge)  | must match R0 KEY
+  lock action        | lock_control          | 0x00 (lock)
+  motor lock         | lock_type             | 0x00 (motor)
+
+  Omni L1 lock->server response: [status, user_id, timestamp, cycling_time]
+    status: 0=success, 1=failure, 2=KEY error
+    cycling_time: ride duration in minutes
+
+  Format: *SCOR,OM,<IMEI>,L1,<status>,<user_id>,<timestamp>,<cycling_time>#
+
+
+------------------------------------------------------------------------
+L5 — External Lock Control -> DiLu 0x02
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device (lock/unlock)
+             Server -> Bridge (get status, from cache)
+
+  Supported operations (chain lock = cable lock in Omni):
+
+  Lock/Unlock (sends DiLu 0x02 to device):
+
+  Omni L5 op | Action          | DiLu control | DiLu type | Verified
+  -----------|-----------------|-------------|-----------|--------
+  1          | Unlock battery  | 0x01        | 0x03      | YES
+  17         | Lock battery    | 0x00        | 0x03      | YES
+  3          | Unlock cable    | 0x01        | 0x02      | YES (chain lock)
+  19         | Lock cable      | 0x00        | 0x02      | YES (chain lock)
+
+  Get Status (responds from cached device_info):
+
+  Omni L5 op | Query              | DiLu source                   | Result
+  -----------|--------------------|-------------------------------|--------
+  33         | Battery lock status| Battery lock status           | 16=locked, 17=unlocked
+  35         | Chain lock status  | Chain lock status             | 16=locked, 17=unlocked
+
+  Omni L5 lock->server response: [operation, result]
+    result: 0=success, 1=failure, 2=timeout, 16=locked, 17=unlocked
+
+  Format: *SCOR,OM,<IMEI>,L5,<operation>,<result>#
+
+  Not supported (returns failure):
+  Omni L5 op | Reason
+  -----------|---------------------------
+  2/18/34    | Helmet lock — not in device doc
+  4/20/36    | Hub lock — excluded per decision
+
+
+------------------------------------------------------------------------
+S1 — Event Notification (only code 2 = Restart)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge -> Device (code 2 only)
+             Server -> Bridge (all other codes, echo only)
+  Action:    Code 2 sends DiLu 0x00 Restart to device + echo S1 back
+             All other codes echo S1 back, no device action
+
+  Omni S1 code | DiLu CMD  | Action                    | Implemented
+  -------------|-----------|--------------------------|------------
+  1 (turn off) | -         | echo only                | YES (no device cmd)
+  2 (restart)  | 0x00      | Restart device           | YES
+  10 (reserved)| -         | echo only                | YES (no device cmd)
+  11 (cancel)  | -         | echo only                | YES (no device cmd)
+  12 (fault)   | -         | echo only                | YES (no device cmd)
+  13 (cancel)  | -         | echo only                | YES (no device cmd)
+  16 (lost)    | -         | echo only                | YES (no device cmd)
+  17 (cancel)  | -         | echo only                | YES (no device cmd)
+
+  Format: *SCOR,OM,<IMEI>,S1,<event_code>#
+
+
+------------------------------------------------------------------------
+I0 — Get SIM Card ICCID (responds from cache)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge (no device query)
+  Action:    Build response from cached device_info (CMD 0x03 Device Info)
+
+  Omni I0 field    | Value                | DiLu source          | Verified
+  -----------------|---------------------|---------------------|--------
+  ICCID            | ICCID1234567890     | device_info["ICCID"]| YES
+
+  Format: *SCOR,OM,<IMEI>,I0,<ICCID>#
+
+
+------------------------------------------------------------------------
+M0 — Get IOT Bluetooth MAC Address (responds from cache)
+------------------------------------------------------------------------
+  Direction: Server -> Bridge (no device query)
+  Action:    Build response from cached device_info (CMD 0x03 Device Info)
+
+  Omni M0 field    | Value              | DiLu source           | Verified
+  -----------------|--------------------|-----------------------|--------
+  MAC address      | 11:22:33:44:55:66  | device_info["BLE MAC"]| YES
+
+  Format: *SCOR,OM,<IMEI>,M0,<MAC>#
+
+
+========================================================================
+OVERLAP — SERVER -> DEVICE MAPPING
+========================================================================
+
+  Server sends (Omni)              | Maps to Device (DiLu)
+  ---------------------------------|------------------------------------
+  S5 Heartbeat upload interval     | 0x11 Heartbeat interval
+  S5 S6 interval in unlock         | 0x11 Unlock notify interval
+  S5 Accelerometer sensitivity     | 0x11 Vibration sensitivity
+  S5 S6 upload in unlock (on/off)  | (on/off toggle — set Unlock notify
+                                   |  interval = 0 for off, non-zero for on)
+  S7 Headlight switch              | 0x03 Headlight control
+  S7 Mode setting                  | 0x07 Set speed limit (mode byte)
+  S4 Low / Med / High speed limits | 0x07 Set speed limit (speed byte)
+  V0 play 1/2/3                    | 0x0C Audio control (play file 1/2/3)
+  V0 80/81                         | 0x0C Audio control (0x10 off / 0x11 on)
+  S6 Get scooter info              | Responds from cached device_info
+  D0 Get GPS                       | Responds from cached device_info
+                                   |   (decimal deg -> NMEA ddmm.mmmm)
+  G0 Get firmware version          | Sends 0x06 query, responds on reply
+  E0 Fault code                    | Auto from status notification
+  S1 code 2 (restart)              | 0x00 Restart
+  R0 Unlock/Lock request            | Echo with generated KEY (no device cmd)
+  L0 Unlock command                | 0x02 Lock control (unlock, motor)
+  L1 Lock command                  | 0x02 Lock control (lock, motor)
+  L5 Unlock/lock battery           | 0x02 Lock control (type=0x03)
+  L5 Unlock/lock cable             | 0x02 Lock control (type=0x02, chain)
+  L5 Get battery/chain status      | Responds from cached device_info
+  S1 codes 1,10-17                 | Echo only, no device command
+  I0 Get SIM ICCID                 | Responds from cached device_info
+  M0 Get BLE MAC                   | Responds from cached device_info
+
+
+========================================================================
+DEVICE-ONLY FIELDS (no server-side control)
+========================================================================
+
+  - APN / Username / Password   (set once during provisioning)
+  - BLE MAC / KEY pairings      (usually set via app or factory)
+
+
+========================================================================
+SERVER-ONLY FIELDS (no direct device field)
+========================================================================
+
+  - "S6 upload in unlock" on/off is a simpler on/off toggle;
+    maps to setting Unlock notify interval = 0 (off) or
+    non-zero (on) on the device.
+
+
+========================================================================
+NOT APPLICABLE — SERVER COMMANDS WITH NO DEVICE EQUIVALENT
+========================================================================
+
+  These Omni server commands have NO corresponding DiLu device
+  command or field. The bridge cannot translate them.
+
+  Command | Field                    | Reason
+  --------|--------------------------|----------------------------------
+  S7      | Throttle response (1/2)  | not in device doc
+  S7      | Taillights (1/2)         | not in device doc
+  S4      | Inch speed display (1/2) | not in device doc
+  S4      | Cruise control (1/2)     | not in device doc
+  S4      | Startup mode (1/2)       | not in device doc
+  S4      | Button switch mode (1/2) | not in device doc
+  S4      | Key switch headlight(1/2)| not in device doc
+  S6      | Battery 2 voltage        | not in device doc (always 0)
+  S6      | Single ride mileage      | not in device doc (always 0)
+  S6      | MCC-MNC                  | not in device doc (always empty)
+  S6      | LAC                      | not in device doc (always empty)
+  S6      | CELLID                   | not in device doc (always empty)
+  D0      | UTC time                 | not in device doc (always empty)
+  D0      | UTC date                 | not in device doc (always empty)
+  D0      | Altitude                 | not in device doc (always empty)
+  G0      | IoT compilation date     | not in device doc (always empty)
+  G0      | Voice file version       | not in device doc (always empty)
+
+  Full Omni commands with NO device equivalent at all:
+  --------------------------------------------------
+  K0      | BLE 8-byte KEY set/get   | not in device doc
+  D1      | Positioning tracking     | not in device doc (DiLu uses
+          |                          |   Unlock/Lock notify intervals instead)
+  V1      | Beep playback settings   | not in device doc. V1 enables/disables
+          |   (alarm/unlock/lock beep)|   beeps per-event, but DiLu only has
+          |                          |   global audio on/off (0x0C 0x10/0x11)
+  Z0      | Get controller custom data| not in device doc
+  Z1      | Set controller custom data| not in device doc
+  D2      | Get WiFi assisted position| not in device doc (device has only
+          |                          |   GPS/LBS location which is already
+          |                          |   sent in status notification CMD 0x00)
+  S2      | Network cmd (LED lamp    | not in device doc (DiLu only has
+          |   strip RGB/brightness/  |   headlight on/off via 0x03,
+          |   effects)               |   no LED strip control)
+  W0      | Alarm commands           | not in device doc (DiLu sends alarm
+          |                          |   status inside CMD 0x00 notification,
+          |                          |   no separate alarm command)
+  C0      | RFID command             | not in device doc (no RFID hardware)
+  B0      | Beacon verify            | not in device doc (no Beacon hardware)
+
+
+========================================================================
+MISMATCHED UPDATE PROTOCOL — NOT POSSIBLE TO TRANSLATE
+========================================================================
+
+  decision: OTA/firmware updates are excluded from the bridge.
+
+  The Omni server and DiLu device use fundamentally different update
+  methods that cannot be translated in real-time:
+
+  Omni (U0/U1/U2): Sends firmware chunk-by-chunk over TCP (128 bytes
+                    per round-trip). Server holds the file and sends
+                    each piece on request.
+
+  DiLu (0x08/0x0E/0x0F): Sends an FTP link to the device. The device
+                          connects to the FTP server independently and
+                          downloads the full file on its own.
+
+  Omni commands excluded:
+  -----------------------
+  U0      | Detect upgrade / boot upgrade
+  U1      | Get upgrade data (128-byte chunks)
+  U2      | Upgrade success notification
+  U5      | HTTP upgrade (partial IOT support)
+  U6      | HTTP upgrade status
+
+  DiLu commands excluded:
+  -----------------------
+  0x08    | CCU OTA (FTP download)
+  0x0E    | ECU OTA (FTP download)
+  0x0F    | Audio OTA (FTP download)
+
+
+========================================================================
+BLE COMMUNICATION — NOT POSSIBLE VIA BRIDGE
+========================================================================
+
+  The Omni App communicates with the IoT device directly via Bluetooth
+  (BLE) for lock/unlock and scooter control. The bridge sits on the
+  TCP path (server <-> device) and has no BLE connection.
+
+  The App cannot control the DiLu device via BLE because they use
+  different BLE protocols (Omni BLE vs DiLu BLE).
+
+  All lock/unlock operations must go through the server (R0/L0/L1)
+  which the bridge CAN translate. Direct App-to-device BLE control
+  is not possible with this architecture.
+
+
+========================================================================
+AES-128-ECB ENCRYPTION (DiLu spec section 4.3)
+========================================================================
+
+  Status: IMPLEMENTED (aes_handler.py)
+  Toggle: device_state["aes_enabled"] = True/False (hardcoded for now)
+
+  Protocol:
+    - Only content + CRC are encrypted (start code + length are plaintext)
+    - Length field = content size BEFORE encryption
+    - Encrypted block = content + CRC + random padding to multiple of 16
+    - Algorithm: AES-128-ECB (standard, pycryptodome library)
+
+  Key hierarchy:
+    Root key (16B)    -> pre-configured per device, stored in device_state
+    Session key (16B) -> generated by device, encrypted with root key,
+                         sent in auth (CMD 0x04)
+
+  Auth detection:
+    Plaintext mode: root key field = raw password (matches known root key)
+    Ciphertext mode: root key field = AES_encrypt(session_key, root_key)
+    (Detection logic to be added later, currently hardcoded bool)
+
+  Incoming packets (device -> bridge):
+    1. Read 5155 + length (plaintext)
+    2. Calculate encrypted block size: ceil((length + 2) / 16) * 16
+    3. Read encrypted block
+    4. Decrypt with session_key
+    5. First [length] bytes = content, next 2 bytes = CRC
+    6. Discard remaining padding
+    7. Verify CRC, parse normally
+
+  Outgoing packets (bridge -> device):
+    1. Build content normally
+    2. Calculate CRC on content
+    3. Pad content + CRC to next multiple of 16 (random bytes)
+    4. Encrypt with session_key
+    5. Send 5155 + length (original content size) + encrypted block
+
+  Test packets in test.py:
+    x = [AES] Auth (encrypted session key inside)
+    y = [AES] Encrypted Status Notification
+
+  Verified: auth decrypts session key correctly, encrypted status
+  decrypts and parses all fields correctly (CRC passes).
+
+========================================================================

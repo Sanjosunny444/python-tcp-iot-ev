@@ -1,0 +1,23 @@
+# Python bytecode -- these were committed by mistake. Compiled .pyc files can
+# be decompiled, so committing them publishes old implementations of source
+# files that may since have been deleted or changed.
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local configuration / secrets.
+# Keep real upstream endpoints and per-device AES root keys out of the repo;
+# see the SECURITY notes in mainserver/pythonserver.py.
+.env
+*.local.py
+config.local.*
+
+# Captured runtime logs. "doc and test/test_log.txt" is a deliberately
+# sanitised sample that IS tracked; raw logs contain real IMEI / ICCID /
+# IMSI values and device IPs, so they must not be committed.
+*.log

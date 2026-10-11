@@ -1,0 +1,746 @@
+# ============================================================
+# Sample bridge run captured for documentation purposes.
+#
+# NOTE: This log has been sanitised before publication. The
+# values below are NOT the ones produced by the real run -- they
+# were replaced with well-formed placeholders so that the packet
+# formats stay readable:
+#   - IMEI   -> 8600000000000xx
+#   - ICCID  -> 89000000000000000xx
+#   - IMSI   -> 2300000000000xx
+#   - device source IPs -> 203.0.113.x  (RFC 5737 doc range)
+#   - upstream hostname -> upstream.example.com
+#   - shell user / home paths -> user, /home/user
+#
+# The AES root key shown below (00112233..eeff) is the dummy test
+# key from test.py, not a provisioned device key.
+# ============================================================
+
+user@bridge-host:~$ python3 pythonserver.py
+🚀 Bridge server running on port 9000
+
+//device 1 try connection (my test python file)
+
+✅ Device connected: ('203.0.113.10', 7182)
+🔗 Connected to upstream upstream.example.com:7072 for device ('203.0.113.10', 7182)
+📥 Raw Device Packet: 51552d000000007b00f401c012555a010040e20100f8ff000015cd5b07b168de3a050001140a0100645000ffffff000000f905
+
+Full Content: 0000007b00f401c012555a010040e20100f8ff000015cd5b07b168de3a050001140a0100645000ffffff000000
+Head: 00, CMD: 00, Length: 45
+Mode                      @[2:3] -> 00
+Speed                     @[3:5] -> 7b00
+Current                   @[5:7] -> f401
+Voltage                   @[7:9] -> c012
+Battery level             @[9:10] -> 55
+backup battery level      @[10:11] -> 5a
+Charging status           @[11:12] -> 01
+Lock status               @[12:13] -> 00
+Total mileage             @[13:17] -> 40e20100
+Remaining mileage         @[17:21] -> f8ff0000
+Latitude                  @[21:25] -> 15cd5b07
+Longitude                 @[25:29] -> b168de3a
+Location accuracy         @[29:31] -> 0500
+Location signal           @[31:32] -> 01
+CSQ                       @[32:33] -> 14
+Number of satellites      @[33:34] -> 0a
+Chain lock connection     @[34:35] -> 01
+Chain lock status         @[35:36] -> 00
+Chain lock battery        @[36:37] -> 64
+Chain lock signal         @[37:38] -> 50
+Battery lock connection   @[38:39] -> 00
+Battery lock status       @[39:40] -> ff
+Battery lock battery      @[40:41] -> ff
+Battery lock signal       @[41:42] -> ff
+Alarm                     @[42:43] -> 00
+Fault code                @[43:45] -> 0000
+
+✅ FINAL PARSED DATA:
+IMSI: Unknown
+ICCID: Unknown
+IMEI: Unknown
+BLE MAC: Unknown
+Device type: Unknown
+Mode: Normal
+Speed: 12.3
+Current: 1000
+Voltage: 12.0
+Battery level: 85
+backup battery level: 90
+Charging status: 1
+Lock status: Locked
+Total mileage: 12345.6
+Remaining mileage: 6552.8
+Latitude: 12.3456789
+Longitude: 98.7654321
+Location accuracy: 5
+Location signal: 1
+CSQ: 20
+Number of satellites: 10
+Chain lock connection status: Connected
+Chain lock status: Locked
+Chain lock battery level: 100
+Chain lock signal: 80
+Battery lock connection status: Unconnected
+Battery lock status: Unknown
+Battery lock battery level: 255
+Battery lock signal: 255
+Alarm: 0
+Fault code: 0
+CCU serial number: Unknown
+CCU firmware version: Unknown
+CCU hardware version: Unknown
+ECU serial number: Unknown
+ECU firmware version: Unknown
+ECU hardware version: Unknown
+Battery serial number: Unknown
+Battery firmware version: Unknown
+Battery hardware version: Unknown
+Battery information: b''
+CCU information: b''
+APN: 
+APN Username: 
+APN Password: 
+BLE name: 
+Heartbeat interval: 3
+Unlock notify interval: 10
+Lock notify interval: 1800
+Static automatic lock: 600
+Vibration sensitivity: 0
+Alarm tone times: 10
+Chain lock BLE MAC: b''
+Chain lock BLE KEY: b''
+Battery lock BLE MAC: b''
+Battery lock BLE KEY: b''
+
+📊 Status: 85% | 12.0V | CSQ: 20
+[STATUS] Held (waiting for auth/info); nothing sent upstream
+📥 Raw Device Packet: 5155200000044d5944455649434549443132330000112233445566778899aabbccddeeffdeeb
+
+Full Content: 00044d5944455649434549443132330000112233445566778899aabbccddeeff
+Head: 00, CMD: 04, Length: 32
+Received Authentication Packet
+ID RAW HEX: 4d5944455649434549443132330000112233445566778899aabbccddeeff
+ID LENGTH: 13
+ROOT START INDEX: 16
+ROOT RAW HEX: 00112233445566778899aabbccddeeff
+ID: MYDEVICEID123
+Root Key: 00112233445566778899aabbccddeeff
+[AUTH] Auth received; waiting for Device Info + Status to send Q0
+[STATUS] Held (waiting for auth/info); nothing sent upstream
+📥 Raw Device Packet: 51553900000334363031313132333435363738393000494343494431323334353637383930003836363738393031323334353637380011223344556600b97e
+
+Full Content: 000334363031313132333435363738393000494343494431323334353637383930003836363738393031323334353637380011223344556600
+Head: 00, CMD: 03, Length: 57
+Received Device Information Notification
+IMSI: 460111234567890
+ICCID: ICCID1234567890
+IMEI: 866789012345678
+BLE MAC: 11:22:33:44:55:66
+Device Type: Scooter
+[SIGNIN] Sending Q0 upstream: *SCOR,OM,866789012345678,Q0,1200,85,20#
+📥 Server → Bridge: 2a53434f532c4f4d2c3836363738393031323334353637382c53342c312c312c312c322c312c31352c32302c3335230a
+🔍 Raw Server Data (Hex): 2a53434f532c4f4d2c3836363738393031323334353637382c53342c312c312c312c322c312c31352c32302c3335230a
+--- 📋 Parsed Server Instruction ---
+🔹 Command:  *SCOS
+🔹 Vendor:   OM
+🔹 Lock ID:  866789012345678
+🔹 Type:     S4
+🔹 Args:     ['1', '1', '1', '2', '1', '15', '20', '35']
+------------------------------------
+🔔 S4 Scooter Setting 2 -> saving speed limits
+[S4] Low speed limit: 15 km/h
+[S4] Medium speed limit: 20 km/h
+[S4] High speed limit: 35 km/h
+[S4->0x07] Mode=soft, Speed=20km/h (serial=100)
+[S4] Echoing to server: *SCOR,OM,866789012345678,S4,1,1,1,2,1,15,20,35#
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,866789012345678,H0,1,1200,20,85,1#
+[PERIODIC] H0 heartbeat sent (every 180s)
+📥 Server → Bridge: 2a53434f532c4f4d2c3836363738393031323334353637382c44312c313830230a
+🔍 Raw Server Data (Hex): 2a53434f532c4f4d2c3836363738393031323334353637382c44312c313830230a
+--- 📋 Parsed Server Instruction ---
+🔹 Command:  *SCOS
+🔹 Vendor:   OM
+🔹 Lock ID:  866789012345678
+🔹 Type:     D1
+🔹 Args:     ['180']
+------------------------------------
+[D1] Tracking enabled: D0 will be sent with every H0
+[D0] Sending positioning upstream: *SCOR,OM,866789012345678,D0,1,,A,1220.7407,N,09845.9259,E,10,1.00,,,M,A#
+[PERIODIC] D1 tracking D0 sent (every 180s)
+⚠ Device Task Error: [Errno 104] Connection reset by peer
+🔌 Device disconnected: ('203.0.113.10', 7182)
+Task exception was never retrieved
+future: <Task finished name='Task-4' coro=<handle_client() done, defined at /home/user/pythonserver.py:365> exception=ConnectionResetError(104, 'Connection reset by peer')>
+Traceback (most recent call last):
+  File "/home/user/pythonserver.py", line 685, in handle_client
+    await device_writer.wait_closed()
+  File "/usr/lib/python3.10/asyncio/streams.py", line 343, in wait_closed
+    await self._protocol._get_close_waiter(self)
+  File "/usr/lib/python3.10/asyncio/selector_events.py", line 862, in _read_ready__data_received
+    data = self._sock.recv(self.max_size)
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+//another device tried connection (my mobile tcp app)
+
+✅ Device connected: ('203.0.113.11', 37198)
+🔗 Connected to upstream upstream.example.com:7072 for device ('203.0.113.11', 37198)
+
+
+latest Log :
+
+📥 Raw Device Packet: 51552c0000000000000000623f5d0000bc020000410100006a948c1a8c87960f010001170e00ffffff010064310000004e3e
+
+[2026-06-14 13:19:11] Full Content: 00000000000000623f5d0000bc020000410100006a948c1a8c87960f010001170e00ffffff01006431000000
+[2026-06-14 13:19:11] Head: 00, CMD: 00, Length: 44
+Mode                      @[2:3] -> 00
+Speed                     @[3:5] -> 0000
+Current                   @[5:7] -> 0000
+Voltage                   @[7:9] -> 623f
+Battery level             @[9:10] -> 5d
+backup battery level      @[10:11] -> 00
+Charging status           @[11:12] -> 00
+Lock status               @[12:13] -> bc
+Total mileage             @[13:17] -> 02000041
+Remaining mileage         @[17:21] -> 0100006a
+Longitude                 @[21:25] -> 948c1a8c
+Latitude                  @[25:29] -> 87960f01
+Location accuracy         @[29:31] -> 0001
+Location signal           @[31:32] -> 17
+CSQ                       @[32:33] -> 0e
+Number of satellites      @[33:34] -> 00
+Chain lock connection     @[34:35] -> ff
+Chain lock status         @[35:36] -> ff
+Chain lock battery        @[36:37] -> ff
+Chain lock signal         @[37:38] -> 01
+Battery lock connection   @[38:39] -> 00
+Battery lock status       @[39:40] -> 64
+Battery lock battery      @[40:41] -> 31
+Battery lock signal       @[41:42] -> 00
+Alarm                     @[42:43] -> 00
+Fault code                @[43:45] -> 00
+
+✅ FINAL PARSED DATA:
+IMSI: 230000000000001
+ICCID: 8900000000000000001
+IMEI: 860000000000001
+BLE MAC: BA:03:2A:51:3D:65
+Device type: Electric motorcycle
+Mode: Normal
+Speed: 0.0
+Current: 0
+Voltage: 40.565
+Battery level: 93
+backup battery level: 0
+Charging status: 0
+Lock status: Unknown
+Total mileage: 109051904.2
+Remaining mileage: 177838489.70000002
+Latitude: 1.7798790999999998
+Longitude: -194.44171319999998
+Location accuracy: 256
+Location signal: 23
+CSQ: 14
+Number of satellites: 0
+Chain lock connection status: Unconnected
+Chain lock status: Unknown
+Chain lock battery level: 255
+Chain lock signal: 1
+Battery lock connection status: Unconnected
+Battery lock status: Unknown (0x64)
+Battery lock battery level: 49
+Battery lock signal: 0
+Alarm: 0
+Fault code: 0
+CCU serial number: Unknown
+CCU firmware version: Unknown
+CCU hardware version: Unknown
+ECU serial number: Unknown
+ECU firmware version: Unknown
+ECU hardware version: Unknown
+Battery serial number: Unknown
+Battery firmware version: Unknown
+Battery hardware version: Unknown
+Battery information: b''
+CCU information: b''
+APN: 
+APN Username: 
+APN Password: 
+BLE name: 
+Heartbeat interval: 3
+Unlock notify interval: 10
+Lock notify interval: 1800
+Static automatic lock: 600
+Vibration sensitivity: 0
+Alarm tone times: 10
+Chain lock BLE MAC: b''
+Chain lock BLE KEY: b''
+Battery lock BLE MAC: b''
+Battery lock BLE KEY: b''
+
+📊 Status: 93% | 40.565V | CSQ: 14
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000001,H0,1,4056,14,93,0#
+[D0] Sending positioning upstream: *SCOR,OM,860000000000004,D0,1,,V,0000.0000,N,00000.0000,E,0,,,,M,N#
+[PERIODIC] D1 tracking D0 sent (every 180s)
+📥 Raw Device Packet: 51552c00000000000000001e3c4c0000f00b000007010000a0958c1a5488960f0100011a0b00ffffff0100643c000000431d
+
+[2026-06-14 13:19:15] Full Content: 000000000000001e3c4c0000f00b000007010000a0958c1a5488960f0100011a0b00ffffff0100643c000000
+[2026-06-14 13:19:15] Head: 00, CMD: 00, Length: 44
+Mode                      @[2:3] -> 00
+Speed                     @[3:5] -> 0000
+Current                   @[5:7] -> 0000
+Voltage                   @[7:9] -> 1e3c
+Battery level             @[9:10] -> 4c
+backup battery level      @[10:11] -> 00
+Charging status           @[11:12] -> 00
+Lock status               @[12:13] -> f0
+Total mileage             @[13:17] -> 0b000007
+Remaining mileage         @[17:21] -> 010000a0
+Longitude                 @[21:25] -> 958c1a54
+Latitude                  @[25:29] -> 88960f01
+Location accuracy         @[29:31] -> 0001
+Location signal           @[31:32] -> 1a
+CSQ                       @[32:33] -> 0b
+Number of satellites      @[33:34] -> 00
+Chain lock connection     @[34:35] -> ff
+Chain lock status         @[35:36] -> ff
+Chain lock battery        @[36:37] -> ff
+Chain lock signal         @[37:38] -> 01
+Battery lock connection   @[38:39] -> 00
+Battery lock status       @[39:40] -> 64
+Battery lock battery      @[40:41] -> 3c
+Battery lock signal       @[41:42] -> 00
+Alarm                     @[42:43] -> 00
+Fault code                @[43:45] -> 00
+
+✅ FINAL PARSED DATA:
+IMSI: 230000000000002
+ICCID: 8900000000000000002
+IMEI: 860000000000002
+BLE MAC: BA:03:63:48:2D:65
+Device type: Electric motorcycle
+Mode: Normal
+Speed: 0.0
+Current: 0
+Voltage: 38.475
+Battery level: 76
+backup battery level: 0
+Charging status: 0
+Lock status: Unknown
+Total mileage: 11744052.3
+Remaining mileage: 268435456.1
+Latitude: 1.7798791999999999
+Longitude: 141.10260689999998
+Location accuracy: 256
+Location signal: 26
+CSQ: 11
+Number of satellites: 0
+Chain lock connection status: Unconnected
+Chain lock status: Unknown
+Chain lock battery level: 255
+Chain lock signal: 1
+Battery lock connection status: Unconnected
+Battery lock status: Unknown (0x64)
+Battery lock battery level: 60
+Battery lock signal: 0
+Alarm: 0
+Fault code: 0
+CCU serial number: Unknown
+CCU firmware version: Unknown
+CCU hardware version: Unknown
+ECU serial number: Unknown
+ECU firmware version: Unknown
+ECU hardware version: Unknown
+Battery serial number: Unknown
+Battery firmware version: Unknown
+Battery hardware version: Unknown
+Battery information: b''
+CCU information: b''
+APN: 
+APN Username: 
+APN Password: 
+BLE name: 
+Heartbeat interval: 3
+Unlock notify interval: 10
+Lock notify interval: 1800
+Static automatic lock: 600
+Vibration sensitivity: 0
+Alarm tone times: 10
+Chain lock BLE MAC: b''
+Chain lock BLE KEY: b''
+Battery lock BLE MAC: b''
+Battery lock BLE KEY: b''
+
+📊 Status: 76% | 38.475V | CSQ: 11
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000002,H0,1,3848,11,76,0#
+📥 Raw Device Packet: 51552c000000000000000038371400006808000080000000d2958c1ab888960f010001160d00ffffff010064420000002f48
+
+[2026-06-14 13:19:26] Full Content: 0000000000000038371400006808000080000000d2958c1ab888960f010001160d00ffffff01006442000000
+[2026-06-14 13:19:26] Head: 00, CMD: 00, Length: 44
+Mode                      @[2:3] -> 00
+Speed                     @[3:5] -> 0000
+Current                   @[5:7] -> 0000
+Voltage                   @[7:9] -> 3837
+Battery level             @[9:10] -> 14
+backup battery level      @[10:11] -> 00
+Charging status           @[11:12] -> 00
+Lock status               @[12:13] -> 68
+Total mileage             @[13:17] -> 08000080
+Remaining mileage         @[17:21] -> 000000d2
+Longitude                 @[21:25] -> 958c1ab8
+Latitude                  @[25:29] -> 88960f01
+Location accuracy         @[29:31] -> 0001
+Location signal           @[31:32] -> 16
+CSQ                       @[32:33] -> 0d
+Number of satellites      @[33:34] -> 00
+Chain lock connection     @[34:35] -> ff
+Chain lock status         @[35:36] -> ff
+Chain lock battery        @[36:37] -> ff
+Chain lock signal         @[37:38] -> 01
+Battery lock connection   @[38:39] -> 00
+Battery lock status       @[39:40] -> 64
+Battery lock battery      @[40:41] -> 42
+Battery lock signal       @[41:42] -> 00
+Alarm                     @[42:43] -> 00
+Fault code                @[43:45] -> 00
+
+✅ FINAL PARSED DATA:
+IMSI: 230000000000003
+ICCID: 8900000000000000003
+IMEI: 860000000000003
+BLE MAC: BA:03:3B:38:3D:65
+Device type: Electric motorcycle
+Mode: Normal
+Speed: 0.0
+Current: 0
+Voltage: 35.34
+Battery level: 20
+backup battery level: 0
+Charging status: 0
+Lock status: Unknown
+Total mileage: 214748365.60000002
+Remaining mileage: 352321536.0
+Latitude: 1.7798791999999999
+Longitude: -120.6219627
+Location accuracy: 256
+Location signal: 22
+CSQ: 13
+Number of satellites: 0
+Chain lock connection status: Unconnected
+Chain lock status: Unknown
+Chain lock battery level: 255
+Chain lock signal: 1
+Battery lock connection status: Unconnected
+Battery lock status: Unknown (0x64)
+Battery lock battery level: 66
+Battery lock signal: 0
+Alarm: 0
+Fault code: 0
+CCU serial number: Unknown
+CCU firmware version: Unknown
+CCU hardware version: Unknown
+ECU serial number: Unknown
+ECU firmware version: Unknown
+ECU hardware version: Unknown
+Battery serial number: Unknown
+Battery firmware version: Unknown
+Battery hardware version: Unknown
+Battery information: b''
+CCU information: b''
+APN: 
+APN Username: 
+APN Password: 
+BLE name: 
+Heartbeat interval: 3
+Unlock notify interval: 10
+Lock notify interval: 1800
+Static automatic lock: 600
+Vibration sensitivity: 0
+Alarm tone times: 10
+Chain lock BLE MAC: b''
+Chain lock BLE KEY: b''
+Battery lock BLE MAC: b''
+Battery lock BLE KEY: b''
+
+📊 Status: 20% | 35.34V | CSQ: 13
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000003,H0,1,3534,13,20,0#
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000003,H0,1,3534,13,20,0#
+[PERIODIC] H0 heartbeat sent (every 180s)
+[D0] Sending positioning upstream: *SCOR,OM,860000000000003,D0,1,,A,0146.7928,N,12037.3178,W,0,51.20,,,M,E#
+[PERIODIC] D1 tracking D0 sent (every 180s)
+📥 Raw Device Packet: 51552c0000000000000000623f5d0000bc020000410100006a948c1a8c87960f010001170d00ffffff010064320000004a7e
+
+[2026-06-14 13:19:42] Full Content: 00000000000000623f5d0000bc020000410100006a948c1a8c87960f010001170d00ffffff01006432000000
+[2026-06-14 13:19:42] Head: 00, CMD: 00, Length: 44
+Mode                      @[2:3] -> 00
+Speed                     @[3:5] -> 0000
+Current                   @[5:7] -> 0000
+Voltage                   @[7:9] -> 623f
+Battery level             @[9:10] -> 5d
+backup battery level      @[10:11] -> 00
+Charging status           @[11:12] -> 00
+Lock status               @[12:13] -> bc
+Total mileage             @[13:17] -> 02000041
+Remaining mileage         @[17:21] -> 0100006a
+Longitude                 @[21:25] -> 948c1a8c
+Latitude                  @[25:29] -> 87960f01
+Location accuracy         @[29:31] -> 0001
+Location signal           @[31:32] -> 17
+CSQ                       @[32:33] -> 0d
+Number of satellites      @[33:34] -> 00
+Chain lock connection     @[34:35] -> ff
+Chain lock status         @[35:36] -> ff
+Chain lock battery        @[36:37] -> ff
+Chain lock signal         @[37:38] -> 01
+Battery lock connection   @[38:39] -> 00
+Battery lock status       @[39:40] -> 64
+Battery lock battery      @[40:41] -> 32
+Battery lock signal       @[41:42] -> 00
+Alarm                     @[42:43] -> 00
+Fault code                @[43:45] -> 00
+
+✅ FINAL PARSED DATA:
+IMSI: 230000000000001
+ICCID: 8900000000000000001
+IMEI: 860000000000001
+BLE MAC: BA:03:2A:51:3D:65
+Device type: Electric motorcycle
+Mode: Normal
+Speed: 0.0
+Current: 0
+Voltage: 40.565
+Battery level: 93
+backup battery level: 0
+Charging status: 0
+Lock status: Unknown
+Total mileage: 109051904.2
+Remaining mileage: 177838489.70000002
+Latitude: 1.7798790999999998
+Longitude: -194.44171319999998
+Location accuracy: 256
+Location signal: 23
+CSQ: 13
+Number of satellites: 0
+Chain lock connection status: Unconnected
+Chain lock status: Unknown
+Chain lock battery level: 255
+Chain lock signal: 1
+Battery lock connection status: Unconnected
+Battery lock status: Unknown (0x64)
+Battery lock battery level: 50
+Battery lock signal: 0
+Alarm: 0
+Fault code: 0
+CCU serial number: Unknown
+CCU firmware version: Unknown
+CCU hardware version: Unknown
+ECU serial number: Unknown
+ECU firmware version: Unknown
+ECU hardware version: Unknown
+Battery serial number: Unknown
+Battery firmware version: Unknown
+Battery hardware version: Unknown
+Battery information: b''
+CCU information: b''
+APN: 
+APN Username: 
+APN Password: 
+BLE name: 
+Heartbeat interval: 3
+Unlock notify interval: 10
+Lock notify interval: 1800
+Static automatic lock: 600
+Vibration sensitivity: 0
+Alarm tone times: 10
+Chain lock BLE MAC: b''
+Chain lock BLE KEY: b''
+Battery lock BLE MAC: b''
+Battery lock BLE KEY: b''
+
+📊 Status: 93% | 40.565V | CSQ: 13
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000001,H0,1,4056,13,93,0#
+📥 Raw Device Packet: 51552c0000000000000000443c4c0000f00b000007010000a0958c1a4a88960f0100011a0c00ffffff0100643e0000006474
+
+[2026-06-14 13:19:45] Full Content: 00000000000000443c4c0000f00b000007010000a0958c1a4a88960f0100011a0c00ffffff0100643e000000
+[2026-06-14 13:19:45] Head: 00, CMD: 00, Length: 44
+Mode                      @[2:3] -> 00
+Speed                     @[3:5] -> 0000
+Current                   @[5:7] -> 0000
+Voltage                   @[7:9] -> 443c
+Battery level             @[9:10] -> 4c
+backup battery level      @[10:11] -> 00
+Charging status           @[11:12] -> 00
+Lock status               @[12:13] -> f0
+Total mileage             @[13:17] -> 0b000007
+Remaining mileage         @[17:21] -> 010000a0
+Longitude                 @[21:25] -> 958c1a4a
+Latitude                  @[25:29] -> 88960f01
+Location accuracy         @[29:31] -> 0001
+Location signal           @[31:32] -> 1a
+CSQ                       @[32:33] -> 0c
+Number of satellites      @[33:34] -> 00
+Chain lock connection     @[34:35] -> ff
+Chain lock status         @[35:36] -> ff
+Chain lock battery        @[36:37] -> ff
+Chain lock signal         @[37:38] -> 01
+Battery lock connection   @[38:39] -> 00
+Battery lock status       @[39:40] -> 64
+Battery lock battery      @[40:41] -> 3e
+Battery lock signal       @[41:42] -> 00
+Alarm                     @[42:43] -> 00
+Fault code                @[43:45] -> 00
+
+✅ FINAL PARSED DATA:
+IMSI: 230000000000002
+ICCID: 8900000000000000002
+IMEI: 860000000000002
+BLE MAC: BA:03:63:48:2D:65
+Device type: Electric motorcycle
+Mode: Normal
+Speed: 0.0
+Current: 0
+Voltage: 38.57
+Battery level: 76
+backup battery level: 0
+Charging status: 0
+Lock status: Unknown
+Total mileage: 11744052.3
+Remaining mileage: 268435456.1
+Latitude: 1.7798791999999999
+Longitude: 124.32539089999999
+Location accuracy: 256
+Location signal: 26
+CSQ: 12
+Number of satellites: 0
+Chain lock connection status: Unconnected
+Chain lock status: Unknown
+Chain lock battery level: 255
+Chain lock signal: 1
+Battery lock connection status: Unconnected
+Battery lock status: Unknown (0x64)
+Battery lock battery level: 62
+Battery lock signal: 0
+Alarm: 0
+Fault code: 0
+CCU serial number: Unknown
+CCU firmware version: Unknown
+CCU hardware version: Unknown
+ECU serial number: Unknown
+ECU firmware version: Unknown
+ECU hardware version: Unknown
+Battery serial number: Unknown
+Battery firmware version: Unknown
+Battery hardware version: Unknown
+Battery information: b''
+CCU information: b''
+APN: 
+APN Username: 
+APN Password: 
+BLE name: 
+Heartbeat interval: 3
+Unlock notify interval: 10
+Lock notify interval: 1800
+Static automatic lock: 600
+Vibration sensitivity: 0
+Alarm tone times: 10
+Chain lock BLE MAC: b''
+Chain lock BLE KEY: b''
+Battery lock BLE MAC: b''
+Battery lock BLE KEY: b''
+
+📊 Status: 76% | 38.57V | CSQ: 12
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000002,H0,1,3857,12,76,0#
+📥 Raw Device Packet: 51552c000000000000000038371400006808000080000000d2958c1ab888960f010001160e00ffffff010064420000002b4c
+
+[2026-06-14 13:19:57] Full Content: 0000000000000038371400006808000080000000d2958c1ab888960f010001160e00ffffff01006442000000
+[2026-06-14 13:19:57] Head: 00, CMD: 00, Length: 44
+Mode                      @[2:3] -> 00
+Speed                     @[3:5] -> 0000
+Current                   @[5:7] -> 0000
+Voltage                   @[7:9] -> 3837
+Battery level             @[9:10] -> 14
+backup battery level      @[10:11] -> 00
+Charging status           @[11:12] -> 00
+Lock status               @[12:13] -> 68
+Total mileage             @[13:17] -> 08000080
+Remaining mileage         @[17:21] -> 000000d2
+Longitude                 @[21:25] -> 958c1ab8
+Latitude                  @[25:29] -> 88960f01
+Location accuracy         @[29:31] -> 0001
+Location signal           @[31:32] -> 16
+CSQ                       @[32:33] -> 0e
+Number of satellites      @[33:34] -> 00
+Chain lock connection     @[34:35] -> ff
+Chain lock status         @[35:36] -> ff
+Chain lock battery        @[36:37] -> ff
+Chain lock signal         @[37:38] -> 01
+Battery lock connection   @[38:39] -> 00
+Battery lock status       @[39:40] -> 64
+Battery lock battery      @[40:41] -> 42
+Battery lock signal       @[41:42] -> 00
+Alarm                     @[42:43] -> 00
+Fault code                @[43:45] -> 00
+
+✅ FINAL PARSED DATA:
+IMSI: 230000000000003
+ICCID: 8900000000000000003
+IMEI: 860000000000003
+BLE MAC: BA:03:3B:38:3D:65
+Device type: Electric motorcycle
+Mode: Normal
+Speed: 0.0
+Current: 0
+Voltage: 35.34
+Battery level: 20
+backup battery level: 0
+Charging status: 0
+Lock status: Unknown
+Total mileage: 214748365.60000002
+Remaining mileage: 352321536.0
+Latitude: 1.7798791999999999
+Longitude: -120.6219627
+Location accuracy: 256
+Location signal: 22
+CSQ: 14
+Number of satellites: 0
+Chain lock connection status: Unconnected
+Chain lock status: Unknown
+Chain lock battery level: 255
+Chain lock signal: 1
+Battery lock connection status: Unconnected
+Battery lock status: Unknown (0x64)
+Battery lock battery level: 66
+Battery lock signal: 0
+Alarm: 0
+Fault code: 0
+CCU serial number: Unknown
+CCU firmware version: Unknown
+CCU hardware version: Unknown
+ECU serial number: Unknown
+ECU firmware version: Unknown
+ECU hardware version: Unknown
+Battery serial number: Unknown
+Battery firmware version: Unknown
+Battery hardware version: Unknown
+Battery information: b''
+CCU information: b''
+APN: 
+APN Username: 
+APN Password: 
+BLE name: 
+Heartbeat interval: 3
+Unlock notify interval: 10
+Lock notify interval: 1800
+Static automatic lock: 600
+Vibration sensitivity: 0
+Alarm tone times: 10
+Chain lock BLE MAC: b''
+Chain lock BLE KEY: b''
+Battery lock BLE MAC: b''
+Battery lock BLE KEY: b''
+
+📊 Status: 20% | 35.34V | CSQ: 14
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000003,H0,1,3534,14,20,0#
+[HEARTBEAT] Sending H0 upstream: *SCOR,OM,860000000000001,H0,1,4056,13,93,0#
+[PERIODIC] H0 heartbeat sent (every 180s)
+[D0] Sending positioning upstream: *SCOR,OM,860000000000001,D0,1,,A,0146.7927,N,19426.5028,W,0,51.20,,,M,E#
+[PERIODIC] D1 tracking D0 sent (every 180s)
